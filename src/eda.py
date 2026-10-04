@@ -226,7 +226,7 @@ def plot_correlation_heatmap(df_cleaned: pd.DataFrame, output_path: Path) -> Pat
     return output_path
 
 
-def run_eda_pipeline() -> Tuple[Dict[str, Any], Dict[str, Path]]:
+def run_eda_pipeline() -> tuple[Dict[str, Any], Dict[str, Path]]:
     """Runs complete EDA pipeline, computes descriptive stats, and saves visualizations.
 
     Returns:

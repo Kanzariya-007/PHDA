@@ -1,0 +1,41 @@
+{
+  "random_state": 42,
+  "test_split_ratio": 0.2,
+  "best_model": "Random Forest",
+  "models": {
+    "Logistic Regression": {
+      "accuracy": 0.7078,
+      "precision": 0.6,
+      "recall": 0.5,
+      "f1_score": 0.5455,
+      "roc_auc": 0.813,
+      "confusion_matrix": [
+        [
+          82,
+          18
+        ],
+        [
+          27,
+          27
+        ]
+      ]
+    },
+    "Random Forest": {
+      "accuracy": 0.7727,
+      "precision": 0.7021,
+      "recall": 0.6111,
+      "f1_score": 0.6535,
+      "roc_auc": 0.8181,
+      "confusion_matrix": [
+        [
+          86,
+          14
+        ],
+        [
+          21,
+          33
+        ]
+      ]
+    }
+  }
+}

@@ -1,4 +1,4 @@
-# Predictive Healthcare Diagnostic App (PHDA) - Diabetes Prediction MVP
+# Predictive Healthcare Diagnostic App (PHDA) - Diabetes Prediction System
 
 A machine learning application for predicting diabetes risk using clinical health indicators from the PIMA Indians Diabetes dataset.
 

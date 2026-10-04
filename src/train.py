@@ -30,6 +30,7 @@ MODELS_DIR = PROJECT_ROOT / "models"
 REPORTS_DIR = PROJECT_ROOT / "reports"
 EVALUATION_JSON_PATH = REPORTS_DIR / "model_evaluation.json"
 BEST_MODEL_PATH = MODELS_DIR / "best_model.joblib"
+MODEL_PKL_PATH = MODELS_DIR / "diabetes_model.pkl"
 
 
 def get_train_test_data(
@@ -187,10 +188,11 @@ def train_and_evaluate_models(
         json.dump(evaluation_summary, f, indent=2)
     print(f"[INFO] Saved model evaluation results to: {EVALUATION_JSON_PATH}")
 
-    # Save best trained model artifact
+    # Save best trained model artifacts
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     joblib.dump(best_model, BEST_MODEL_PATH)
-    print(f"[INFO] Saved best trained model artifact to: {BEST_MODEL_PATH}")
+    joblib.dump(best_model, MODEL_PKL_PATH)
+    print(f"[INFO] Saved best trained model artifact to: {MODEL_PKL_PATH}")
 
     return results, best_model_name, best_model
 

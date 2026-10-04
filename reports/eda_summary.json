@@ -1,0 +1,126 @@
+{
+  "dataset_dimensions": {
+    "rows": 768,
+    "columns": 9
+  },
+  "target_balance": {
+    "negative_cases_0": 500,
+    "positive_cases_1": 268,
+    "negative_pct": 65.1,
+    "positive_pct": 34.9,
+    "imbalance_ratio": 1.87
+  },
+  "feature_summary": {
+    "Pregnancies": {
+      "count": 768.0,
+      "mean": 3.845,
+      "std": 3.37,
+      "min": 0.0,
+      "25%": 1.0,
+      "50%": 3.0,
+      "75%": 6.0,
+      "max": 17.0,
+      "median": 3.0,
+      "skewness": 0.902,
+      "missing_pct": 0.0
+    },
+    "Glucose": {
+      "count": 763.0,
+      "mean": 121.687,
+      "std": 30.536,
+      "min": 44.0,
+      "25%": 99.0,
+      "50%": 117.0,
+      "75%": 141.0,
+      "max": 199.0,
+      "median": 117.0,
+      "skewness": 0.531,
+      "missing_pct": 0.651
+    },
+    "BloodPressure": {
+      "count": 733.0,
+      "mean": 72.405,
+      "std": 12.382,
+      "min": 24.0,
+      "25%": 64.0,
+      "50%": 72.0,
+      "75%": 80.0,
+      "max": 122.0,
+      "median": 72.0,
+      "skewness": 0.134,
+      "missing_pct": 4.557
+    },
+    "SkinThickness": {
+      "count": 541.0,
+      "mean": 29.153,
+      "std": 10.477,
+      "min": 7.0,
+      "25%": 22.0,
+      "50%": 29.0,
+      "75%": 36.0,
+      "max": 99.0,
+      "median": 29.0,
+      "skewness": 0.691,
+      "missing_pct": 29.557
+    },
+    "Insulin": {
+      "count": 394.0,
+      "mean": 155.548,
+      "std": 118.776,
+      "min": 14.0,
+      "25%": 76.25,
+      "50%": 125.0,
+      "75%": 190.0,
+      "max": 846.0,
+      "median": 125.0,
+      "skewness": 2.166,
+      "missing_pct": 48.698
+    },
+    "BMI": {
+      "count": 757.0,
+      "mean": 32.457,
+      "std": 6.925,
+      "min": 18.2,
+      "25%": 27.5,
+      "50%": 32.3,
+      "75%": 36.6,
+      "max": 67.1,
+      "median": 32.3,
+      "skewness": 0.594,
+      "missing_pct": 1.432
+    },
+    "DiabetesPedigreeFunction": {
+      "count": 768.0,
+      "mean": 0.472,
+      "std": 0.331,
+      "min": 0.078,
+      "25%": 0.244,
+      "50%": 0.372,
+      "75%": 0.626,
+      "max": 2.42,
+      "median": 0.372,
+      "skewness": 1.92,
+      "missing_pct": 0.0
+    },
+    "Age": {
+      "count": 768.0,
+      "mean": 33.241,
+      "std": 11.76,
+      "min": 21.0,
+      "25%": 24.0,
+      "50%": 29.0,
+      "75%": 41.0,
+      "max": 81.0,
+      "median": 29.0,
+      "skewness": 1.13,
+      "missing_pct": 0.0
+    }
+  },
+  "zero_invalid_columns": [
+    "Glucose",
+    "BloodPressure",
+    "SkinThickness",
+    "Insulin",
+    "BMI"
+  ]
+}

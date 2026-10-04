@@ -1,0 +1,32 @@
+# Data directory (keep structure via .gitkeep, ignore data files)
+data/raw/*.csv
+data/processed/*.csv
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Model artifacts
+models/*.joblib
+models/*.pkl
+!models/.gitkeep
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# Testing & Cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment & IDE
+.env
+.vscode/
+.idea/

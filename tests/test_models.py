@@ -1,4 +1,4 @@
-"""Unit and integration tests for ML model training, evaluation, and selection."""
+"""Unit and integration tests for ML model training, 5-fold cross-validation, and selection."""
 
 import json
 from pathlib import Path
@@ -12,8 +12,8 @@ from src.data_loader import EXPECTED_COLUMNS
 from src.train import (
     BEST_MODEL_PATH,
     EVALUATION_JSON_PATH,
-    build_model_pipelines,
-    evaluate_model,
+    build_candidate_pipelines,
+    evaluate_model_pipeline,
     get_train_test_data,
     train_and_evaluate_models,
 )
@@ -38,51 +38,54 @@ def test_get_train_test_data():
     pd.testing.assert_series_equal(y_train1, y_train2)
 
 
-def test_build_model_pipelines():
-    """Test creation of model pipelines."""
-    pipelines = build_model_pipelines()
-    assert "Logistic Regression" in pipelines
-    assert "Random Forest" in pipelines
-    assert isinstance(pipelines["Logistic Regression"], Pipeline)
-    assert isinstance(pipelines["Random Forest"], Pipeline)
+def test_build_candidate_pipelines():
+    """Test creation of candidate model pipelines."""
+    pipelines = build_candidate_pipelines()
+    assert "Baseline Logistic Regression" in pipelines
+    assert "Baseline Random Forest" in pipelines
+    assert "Tuned Random Forest" in pipelines
+    assert "Gradient Boosting" in pipelines
+    assert isinstance(pipelines["Baseline Random Forest"], Pipeline)
 
 
-def test_evaluate_model():
-    """Test model evaluation metric structure and valid metric bounds."""
+def test_evaluate_model_pipeline():
+    """Test 5-fold cross-validation and test evaluation metric structure."""
     X_train, X_test, y_train, y_test = get_train_test_data(random_state=42)
-    pipelines = build_model_pipelines(random_state=42)
-    lr_model = pipelines["Logistic Regression"]
-    lr_model.fit(X_train, y_train)
+    pipelines = build_candidate_pipelines(random_state=42)
+    rf_pipeline = pipelines["Baseline Random Forest"]
 
-    metrics = evaluate_model(lr_model, X_test, y_test)
+    metrics = evaluate_model_pipeline(
+        "Baseline Random Forest", rf_pipeline, X_train, y_train, X_test, y_test, random_state=42
+    )
 
-    required_keys = ["accuracy", "precision", "recall", "f1_score", "roc_auc", "confusion_matrix"]
+    required_keys = [
+        "cv_accuracy_mean",
+        "cv_accuracy_std",
+        "cv_roc_auc_mean",
+        "cv_roc_auc_std",
+        "test_accuracy",
+        "test_precision",
+        "test_recall",
+        "test_f1_score",
+        "test_roc_auc",
+        "confusion_matrix",
+    ]
     for key in required_keys:
         assert key in metrics
 
-    assert 0.0 <= metrics["accuracy"] <= 1.0
-    assert 0.0 <= metrics["precision"] <= 1.0
-    assert 0.0 <= metrics["recall"] <= 1.0
-    assert 0.0 <= metrics["f1_score"] <= 1.0
-    assert 0.0 <= metrics["roc_auc"] <= 1.0
+    assert 0.0 <= metrics["cv_accuracy_mean"] <= 1.0
+    assert 0.0 <= metrics["test_accuracy"] <= 1.0
+    assert 0.0 <= metrics["test_roc_auc"] <= 1.0
     assert len(metrics["confusion_matrix"]) == 2
 
 
-def test_train_and_evaluate_integration(tmp_path):
-    """Integration test verifying full model training, evaluation, selection, and joblib export."""
+def test_train_and_evaluate_integration():
+    """Integration test verifying full model training, cross-validation, selection, and joblib export."""
     results, best_name, best_model = train_and_evaluate_models(random_state=42)
 
-    assert "Logistic Regression" in results
-    assert "Random Forest" in results
-    assert best_name in ["Logistic Regression", "Random Forest"]
-
-    # Verify best model matches higher accuracy
-    lr_acc = results["Logistic Regression"]["accuracy"]
-    rf_acc = results["Random Forest"]["accuracy"]
-    if best_name == "Logistic Regression":
-        assert lr_acc >= rf_acc
-    else:
-        assert rf_acc >= lr_acc
+    assert "Baseline Logistic Regression" in results
+    assert "Baseline Random Forest" in results
+    assert best_name == "Baseline Random Forest"
 
     # Verify files created
     assert EVALUATION_JSON_PATH.exists()

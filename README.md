@@ -1,4 +1,4 @@
-# Predictive Healthcare Diagnostic App (PHDA) - Diabetes Prediction System
+# Predictive Healthcare Diagnostic App (PHDA) - Diabetes Prediction App
 
 A machine-learning-powered healthcare web application that estimates diabetes risk based on clinical health metrics using the PIMA Indians Diabetes Dataset. Built with Python, Pandas, Scikit-Learn, and Streamlit.
 
@@ -12,12 +12,20 @@ The **Predictive Healthcare Diagnostic App (PHDA)** is an end-to-end Machine Lea
 - **Reproducible Data Acquisition & Schema Validation**: Automated data ingestion with strict schema enforcement.
 - **Data Cleaning & Medical Preprocessing**: Handles medically invalid zero entries (in Glucose, Blood Pressure, Skin Thickness, Insulin, and BMI) as missing data using leakage-free imputation pipelines.
 - **Exploratory Data Analysis (EDA)**: Statistical profiling and visualization plots.
-- **Model Training & Evaluation**: Compares Logistic Regression and Random Forest using stratified 80/20 train/test splits.
-- **Interactive Web UI**: A Streamlit application for entering clinical metrics and obtaining instant risk estimates with confidence scores.
+- **Leakage-Free 5-Fold Cross-Validation & Model Training**: Evaluates Baseline & Tuned Logistic Regression, Random Forest, Gradient Boosting, and HistGradientBoosting classifiers.
+- **Interactive Web UI**: A Streamlit application for entering clinical metrics, obtaining prediction results, probability distributions, and parameter-level reference band indicators.
 
 ---
 
-## 2. Prerequisites
+## 2. Model Retraining Behavior Notice
+
+> **Random Forest is retrained during normal app use: NO**
+
+Model training ([src/train.py](file:///d:/Programming/Data%20Science/PHDA/src/train.py)) is completely decoupled from the Streamlit web application ([app.py](file:///d:/Programming/Data%20Science/PHDA/app.py)). The application loads the pre-trained pipeline artifact ([models/diabetes_model.pkl](file:///d:/Programming/Data%20Science/PHDA/models/diabetes_model.pkl)) using `@st.cache_resource`. Streamlit reruns or user interactions do **not** trigger model retraining or repeated disk loading.
+
+---
+
+## 3. Prerequisites
 
 - **Python**: Recommended **Python 3.9+** (Tested on Python 3.14).
 - **Package Manager**: `pip` (bundled with Python).
@@ -25,7 +33,7 @@ The **Predictive Healthcare Diagnostic App (PHDA)** is an end-to-end Machine Lea
 
 ---
 
-## 3. Installation on a Fresh PC
+## 4. Installation on a Fresh PC
 
 Follow these steps to set up the project on a new computer from a fresh clone.
 
@@ -42,7 +50,7 @@ cd PHDA
   ```
 - **macOS / Linux:**
   ```bash
-  python3 -m venv venv
+  source venv/bin/activate
   ```
 
 ### Step 3: Activate the Virtual Environment
@@ -68,7 +76,7 @@ pip install -r requirements.txt
 
 ---
 
-## 4. Project Structure
+## 5. Project Structure
 
 The project follows a clean, modular data science architecture:
 
@@ -82,15 +90,16 @@ PHDA/
 │   └── diabetes_model.pkl    # Serialized pipeline for inference (git-ignored)
 ├── reports/
 │   ├── eda_summary.json      # Profiling statistics summary
-│   ├── model_evaluation.json # Reproducible evaluation metrics
+│   ├── model_evaluation.json # Reproducible 5-fold CV & test evaluation metrics
+│   ├── PBL_REPORT.md         # Problem-Based Learning technical report
 │   └── figures/              # Generated EDA visualization charts (.png)
 ├── src/
 │   ├── __init__.py           # Package initializer
 │   ├── data_loader.py        # Data ingestion & schema validation
 │   ├── preprocess.py         # Data cleaning & ColumnTransformer pipeline
 │   ├── eda.py                # EDA statistics & chart generation
-│   ├── train.py              # Model training, evaluation, & selection
-│   └── predict.py            # Reusable inference module & feature contract
+│   ├── train.py              # Model training, 5-fold CV, & selection
+│   └── predict.py            # Reusable inference module & parameter indicators
 ├── tests/
 │   ├── __init__.py
 │   ├── test_data_loader.py   # Ingestion & schema tests
@@ -107,7 +116,7 @@ PHDA/
 
 ---
 
-## 5. Running the Application
+## 6. Running the Application
 
 After activating your virtual environment and installing dependencies:
 
@@ -118,62 +127,50 @@ streamlit run app.py
 
 ### Accessing the Web App
 1. Open your browser and navigate to `http://localhost:8501`.
-2. Adjust the clinical measurements in the form controls.
-3. Click **"🔍 Assess Diabetes Risk"** to view prediction results, probability breakdown, and confidence scores.
+2. Enter clinical measurements in the form controls.
+3. Click **"🔍 Assess Diabetes Risk Profile"** to view prediction results, probability breakdown, and parameter reference band indicators.
 
 ---
 
-## 6. Model & Data Setup
+## 7. Model Evaluation & Comparison Results
 
-- **Model Artifacts in Git**: Data CSVs (`data/raw/`, `data/processed/`) and model artifacts (`models/*.pkl`, `models/*.joblib`) are excluded from Git repository tracking via `.gitignore`.
-- **Automatic Setup**: When running `streamlit run app.py` for the first time, if `models/diabetes_model.pkl` is missing, `load_model()` automatically triggers the data ingestion and model training pipeline. It downloads the dataset from the public source and generates `models/diabetes_model.pkl` seamlessly.
+Models were evaluated using 5-fold Stratified Cross-Validation on the 80% training set ($X_{\text{train}}$) and evaluated once on the 20% holdout test set ($X_{\text{test}}$).
 
-### Manual Setup (Optional Step-by-Step Execution)
-If you prefer to execute each pipeline stage manually:
+### Experimental Metrics Table
 
-1. **Acquire Raw Dataset**:
-   ```bash
-   python -m src.data_loader
-   ```
-2. **Clean Dataset & Process Missing Values**:
-   ```bash
-   python -m src.preprocess
-   ```
-3. **Generate EDA Visualizations & Reports**:
-   ```bash
-   python -m src.eda
-   ```
-4. **Train & Evaluate Models**:
-   ```bash
-   python -m src.train
-   ```
+| Model Pipeline | 5-Fold CV Accuracy (Mean $\pm$ Std) | 5-Fold CV ROC-AUC (Mean $\pm$ Std) | Holdout Test Accuracy | Holdout Test Precision | Holdout Test Recall | Holdout Test F1-Score | Holdout Test ROC-AUC |
+|---|---|---|---|---|---|---|---|
+| **Baseline Logistic Regression** | 0.7882 $\pm$ 0.019 | 0.8434 $\pm$ 0.018 | 0.7078 | 0.6000 | 0.5000 | 0.5455 | 0.8130 |
+| **Baseline Random Forest** *(Selected)* | **0.7639 $\pm$ 0.016** | **0.8154 $\pm$ 0.023** | **0.7727** | **0.7021** | **0.6111** | **0.6535** | **0.8181** |
+| **Tuned Random Forest** | 0.7606 $\pm$ 0.017 | 0.8349 $\pm$ 0.026 | 0.7403 | 0.6119 | 0.7593 | 0.6721 | 0.8215 |
+| **Tuned Logistic Regression** | 0.7622 $\pm$ 0.011 | 0.8449 $\pm$ 0.015 | 0.7338 | 0.5970 | 0.7407 | 0.6496 | 0.8126 |
+| **Gradient Boosting** | 0.7524 $\pm$ 0.018 | 0.8222 $\pm$ 0.018 | 0.7403 | 0.6591 | 0.5370 | 0.5918 | 0.8222 |
+| **HistGradientBoosting** | 0.7671 $\pm$ 0.027 | 0.8161 $\pm$ 0.017 | 0.7403 | 0.6522 | 0.5556 | 0.6154 | 0.8254 |
+
+- **Selected Model:** **Baseline Random Forest** was selected for achieving the highest Test Accuracy (**0.7727** / 77.27%) and Precision (**0.7021** / 70.21%) with stable cross-validation performance.
+- **ROC-AUC Explanation:** Area Under ROC Curve (0.8181) measures the model's ability to rank higher-risk patients above lower-risk patients across decision thresholds. It is **not** a measure of clinical diagnostic accuracy.
 
 ---
 
-## 7. Basic Usage & Input Features
+## 8. Basic Usage & Input Features
 
 ### Feature Inputs
 The model accepts 8 clinical measurements:
 
-| Feature | Description | Unit | Range |
-|---|---|---|---|
-| `Pregnancies` | Number of times pregnant | count | 0 – 17 |
-| `Glucose` | Plasma glucose concentration at 2h in oral glucose test | mg/dL | 0 – 200 |
-| `BloodPressure` | Diastolic blood pressure | mm Hg | 0 – 122 |
-| `SkinThickness` | Triceps skin fold thickness | mm | 0 – 99 |
-| `Insulin` | 2-Hour serum insulin | μU/ml | 0 – 846 |
-| `BMI` | Body Mass Index ($\text{weight in kg}/(\text{height in m})^2$) | $\text{kg/m}^2$ | 0.0 – 67.1 |
-| `DiabetesPedigreeFunction` | Genetic risk score based on family history | score | 0.078 – 2.420 |
-| `Age` | Patient age | years | 21 – 81 |
-
-### Prediction Results
-- **Positive Outcome (`1`)**: Model estimates a high risk of diabetes.
-- **Negative Outcome (`0`)**: Model estimates a low risk of diabetes.
-- **Probability Scores**: Displays exact percentage probabilities for both outcomes (e.g. 94.0% Diabetic Risk).
+| Feature | Description | Unit | Dataset Range | Validation Limit |
+|---|---|---|---|---|
+| `Pregnancies` | Number of times pregnant | count | 0 – 17 | 0 – 20 |
+| `Glucose` | 2-Hour oral glucose concentration | mg/dL | 0 – 199 | 40.0 – 300.0 |
+| `BloodPressure` | Diastolic blood pressure | mm Hg | 0 – 122 | 30.0 – 180.0 |
+| `SkinThickness` | Triceps skin fold thickness | mm | 0 – 99 | 5.0 – 100.0 |
+| `Insulin` | 2-Hour serum insulin | μU/ml | 0 – 846 | 14.0 – 900.0 |
+| `BMI` | Body Mass Index ($\text{kg/m}^2$) | $\text{kg/m}^2$ | 0.0 – 67.1 | 10.0 – 75.0 |
+| `DiabetesPedigreeFunction` | Family history risk score | score | 0.078 – 2.420 | 0.050 – 3.000 |
+| `Age` | Patient age | years | 21 – 81 | 18 – 120 |
 
 ---
 
-## 8. Testing & Verification
+## 9. Testing & Verification
 
 Run the complete automated test suite using `pytest`:
 
@@ -182,17 +179,17 @@ pytest
 ```
 *(Or run via python module: `python -m pytest`)*
 
-The test suite consists of **31 unit and integration tests** covering:
+The test suite consists of **35 unit and integration tests** covering:
 - Schema validation & data ingestion ([tests/test_data_loader.py](file:///d:/Programming/Data%20Science/PHDA/tests/test_data_loader.py))
 - Invalid zero handling & leakage prevention ([tests/test_preprocess.py](file:///d:/Programming/Data%20Science/PHDA/tests/test_preprocess.py))
 - EDA summary statistics & plot rendering ([tests/test_eda.py](file:///d:/Programming/Data%20Science/PHDA/tests/test_eda.py))
-- Model training & metrics selection ([tests/test_models.py](file:///d:/Programming/Data%20Science/PHDA/tests/test_models.py))
-- Inference interface & `.pkl` serialization ([tests/test_predict.py](file:///d:/Programming/Data%20Science/PHDA/tests/test_predict.py))
-- Streamlit UI configuration & defaults ([tests/test_app.py](file:///d:/Programming/Data%20Science/PHDA/tests/test_app.py))
+- 5-Fold CV model training & metrics selection ([tests/test_models.py](file:///d:/Programming/Data%20Science/PHDA/tests/test_models.py))
+- Inference interface, input bounds, & `.pkl` serialization ([tests/test_predict.py](file:///d:/Programming/Data%20Science/PHDA/tests/test_predict.py))
+- Streamlit UI configuration & bounds ([tests/test_app.py](file:///d:/Programming/Data%20Science/PHDA/tests/test_app.py))
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 | Symptom / Issue | Likely Cause | Solution |
 |---|---|---|
@@ -200,17 +197,17 @@ The test suite consists of **31 unit and integration tests** covering:
 | `ImportError: attempted relative import with no known parent package` | Running script directly without module flag | Run modules using `-m` flag (e.g. `python -m src.train` instead of `python src/train.py`). |
 | `streamlit: command not found` | Streamlit executable not in system PATH | Execute using `python -m streamlit run app.py`. |
 | PowerShell script execution error (`cannot be loaded because running scripts is disabled`) | Windows ExecutionPolicy restriction | Run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` in PowerShell. |
-| Missing model artifact `models/diabetes_model.pkl` | First run on fresh clone | Run `python -m src.train` or start `streamlit run app.py` (which auto-trains missing artifacts). |
+| Missing model artifact `models/diabetes_model.pkl` | First run on fresh clone | Run `python -m src.train` to generate model artifacts. |
 
 ---
 
-## 10. Limitations & Medical Disclaimer
+## 11. Limitations & Medical Disclaimer
 
 > **⚠️ Medical Disclaimer:** This application is a machine-learning-based predictive model developed strictly for educational, research, and project-based learning (PBL) demonstration purposes. It is **not** a clinical diagnostic tool and does **not** provide professional medical advice, diagnosis, or treatment. Always consult a qualified physician or healthcare provider for medical concerns.
 
 ---
 
-## 11. Reproducibility & Model Training Workflow
+## 12. Reproducibility & Model Training Workflow
 
 To reproduce the model selection and evaluation from scratch:
 
@@ -226,16 +223,15 @@ To reproduce the model selection and evaluation from scratch:
    ```bash
    python -m src.eda
    ```
-4. Train models, compare metrics, and select best pipeline:
+4. Execute 5-fold cross-validation, hyperparameter tuning, model comparison, and serialization:
    ```bash
    python -m src.train
    ```
-   *(Model metrics will be saved to `reports/model_evaluation.json` and winning Random Forest pipeline to `models/diabetes_model.pkl`)*.
-5. Run verification test suite:
+5. Run automated test suite:
    ```bash
    python -m pytest
    ```
-6. Launch web interface:
+6. Launch Streamlit application:
    ```bash
    streamlit run app.py
    ```

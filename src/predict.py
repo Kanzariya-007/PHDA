@@ -264,168 +264,207 @@ def classify_parameter_indicators(input_data: Dict[str, Any]) -> List[Dict[str, 
 
         # Classification logic per parameter based on clinical reference thresholds & dataset stats
         if col == "Glucose":
+            ref_band = "70–99 mg/dL"
             if val == 0 or val < 70:
                 severity = "Low" if val > 0 else "Unrecorded"
+                deviation = "Below" if val > 0 else "Unrecorded"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Glucose level below standard fasting baseline (< 70 mg/dL)."
+                desc = "Below standard fasting baseline (< 70 mg/dL)."
             elif 70 <= val <= 99:
                 severity = "Normal"
+                deviation = "Within"
                 tag = "normal"
                 badge_color = "#16A34A"
-                desc = "Glucose level within normal reference range (70–99 mg/dL)."
+                desc = "Within normal reference band (70–99 mg/dL)."
             elif 100 <= val <= 125:
                 severity = "High"
+                deviation = "Above"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Elevated glucose level in prediabetes band (100–125 mg/dL)."
-            else: # val >= 126
+                desc = "Above reference band; prediabetes range (100–125 mg/dL)."
+            else:  # val >= 126
                 severity = "Very High"
+                deviation = "Above"
                 tag = "danger"
                 badge_color = "#DC2626"
-                desc = "Significantly elevated glucose level (≥ 126 mg/dL)."
+                desc = "Significantly above reference band (≥ 126 mg/dL)."
 
         elif col == "BloodPressure":
+            ref_band = "60–80 mm Hg"
             if val == 0 or val < 60:
                 severity = "Low" if val > 0 else "Unrecorded"
+                deviation = "Below" if val > 0 else "Unrecorded"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Diastolic blood pressure below standard baseline (< 60 mm Hg)."
+                desc = "Below standard diastolic baseline (< 60 mm Hg)."
             elif 60 <= val <= 80:
                 severity = "Normal"
+                deviation = "Within"
                 tag = "normal"
                 badge_color = "#16A34A"
-                desc = "Diastolic blood pressure in normal range (60–80 mm Hg)."
+                desc = "Within normal diastolic reference band (60–80 mm Hg)."
             elif 81 <= val <= 89:
                 severity = "High"
+                deviation = "Above"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Mildly elevated diastolic blood pressure (81–89 mm Hg)."
-            else: # val >= 90
+                desc = "Above reference band; mild diastolic elevation (81–89 mm Hg)."
+            else:  # val >= 90
                 severity = "Very High"
+                deviation = "Above"
                 tag = "danger"
                 badge_color = "#DC2626"
-                desc = "High diastolic blood pressure (≥ 90 mm Hg)."
+                desc = "Significantly above reference band (≥ 90 mm Hg)."
 
         elif col == "BMI":
+            ref_band = "18.5–24.9 kg/m²"
             if val == 0 or val < 18.5:
                 severity = "Low" if val > 0 else "Unrecorded"
+                deviation = "Below" if val > 0 else "Unrecorded"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Body Mass Index below standard normal range (< 18.5 kg/m²)."
+                desc = "Below standard normal BMI baseline (< 18.5 kg/m²)."
             elif 18.5 <= val <= 24.9:
                 severity = "Normal"
+                deviation = "Within"
                 tag = "normal"
                 badge_color = "#16A34A"
-                desc = "BMI within normal healthy range (18.5–24.9 kg/m²)."
+                desc = "Within normal healthy BMI band (18.5–24.9 kg/m²)."
             elif 25.0 <= val <= 29.9:
                 severity = "High"
+                deviation = "Above"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Overweight BMI category (25.0–29.9 kg/m²)."
-            else: # val >= 30.0
+                desc = "Above reference band; overweight BMI category (25.0–29.9 kg/m²)."
+            else:  # val >= 30.0
                 severity = "Very High"
+                deviation = "Above"
                 tag = "danger"
                 badge_color = "#DC2626"
-                desc = "Obese BMI category (≥ 30.0 kg/m²)."
+                desc = "Significantly above reference band; obese category (≥ 30.0 kg/m²)."
 
         elif col == "SkinThickness":
+            ref_band = "10–30 mm"
             if val == 0 or val < 10:
                 severity = "Low" if val > 0 else "Unrecorded"
+                deviation = "Below" if val > 0 else "Unrecorded"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Triceps skinfold thickness below baseline (< 10 mm)."
+                desc = "Below standard skinfold baseline (< 10 mm)."
             elif 10 <= val <= 30:
                 severity = "Normal"
+                deviation = "Within"
                 tag = "normal"
                 badge_color = "#16A34A"
-                desc = "Triceps skinfold thickness in normal range (10–30 mm)."
+                desc = "Within normal skinfold thickness band (10–30 mm)."
             elif 31 <= val <= 40:
                 severity = "High"
+                deviation = "Above"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Elevated skinfold thickness (31–40 mm)."
-            else: # val > 40
+                desc = "Above reference band (31–40 mm)."
+            else:  # val > 40
                 severity = "Very High"
+                deviation = "Above"
                 tag = "danger"
                 badge_color = "#DC2626"
-                desc = "High skinfold thickness (> 40 mm)."
+                desc = "Significantly above reference band (> 40 mm)."
 
         elif col == "Insulin":
+            ref_band = "15–166 μU/ml"
             if val == 0 or val < 15:
                 severity = "Low" if val > 0 else "Unrecorded"
+                deviation = "Below" if val > 0 else "Unrecorded"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "2-Hour serum insulin below normal range (< 15 μU/ml)."
+                desc = "Below standard insulin baseline (< 15 μU/ml)."
             elif 15 <= val <= 166:
                 severity = "Normal"
+                deviation = "Within"
                 tag = "normal"
                 badge_color = "#16A34A"
-                desc = "Serum insulin level in normal range (15–166 μU/ml)."
+                desc = "Within normal serum insulin reference band (15–166 μU/ml)."
             elif 167 <= val <= 250:
                 severity = "High"
+                deviation = "Above"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Elevated serum insulin level (167–250 μU/ml)."
-            else: # val > 250
+                desc = "Above reference band (167–250 μU/ml)."
+            else:  # val > 250
                 severity = "Very High"
+                deviation = "Above"
                 tag = "danger"
                 badge_color = "#DC2626"
-                desc = "High serum insulin level (> 250 μU/ml)."
+                desc = "Significantly above reference band (> 250 μU/ml)."
 
         elif col == "Pregnancies":
+            ref_band = "0–4 count"
             if val <= 4:
                 severity = "Normal"
+                deviation = "Within"
                 tag = "normal"
                 badge_color = "#16A34A"
-                desc = "Pregnancy count in typical reference band (0–4)."
+                desc = "Within typical population baseline (0–4)."
             elif 5 <= val <= 8:
                 severity = "High"
+                deviation = "Above"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "High pregnancy count (5–8)."
-            else: # val > 8
+                desc = "Above typical reference band (5–8)."
+            else:  # val > 8
                 severity = "Very High"
+                deviation = "Above"
                 tag = "danger"
                 badge_color = "#DC2626"
-                desc = "High pregnancy count (> 8)."
+                desc = "Significantly above typical reference band (> 8)."
 
         elif col == "DiabetesPedigreeFunction":
+            ref_band = "0.078–0.499 score"
             if val <= 0.499:
                 severity = "Normal"
+                deviation = "Within"
                 tag = "normal"
                 badge_color = "#16A34A"
-                desc = "Low to average genetic pedigree risk score (≤ 0.50)."
+                desc = "Within typical pedigree risk score band (≤ 0.50)."
             elif 0.500 <= val <= 0.799:
                 severity = "High"
+                deviation = "Above"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Elevated genetic pedigree risk score (0.50–0.80)."
-            else: # val >= 0.800
+                desc = "Above typical pedigree score band (0.50–0.80)."
+            else:  # val >= 0.800
                 severity = "Very High"
+                deviation = "Above"
                 tag = "danger"
                 badge_color = "#DC2626"
-                desc = "High genetic pedigree risk score (≥ 0.80)."
+                desc = "Significantly above typical pedigree score band (≥ 0.80)."
 
         elif col == "Age":
+            ref_band = "18–44 years"
             if val <= 44:
                 severity = "Normal"
+                deviation = "Within"
                 tag = "normal"
                 badge_color = "#16A34A"
-                desc = "Younger to early middle-age cohort (18–44 years)."
+                desc = "Younger / early middle-age cohort (18–44 yrs)."
             elif 45 <= val <= 64:
                 severity = "High"
+                deviation = "Above"
                 tag = "warning"
                 badge_color = "#D97706"
-                desc = "Middle-age cohort with increased demographic baseline risk (45–64 years)."
-            else: # val >= 65
+                desc = "Middle-age cohort with elevated demographic baseline (45–64 yrs)."
+            else:  # val >= 65
                 severity = "Very High"
+                deviation = "Above"
                 tag = "danger"
                 badge_color = "#DC2626"
-                desc = "Senior age cohort (≥ 65 years)."
+                desc = "Senior age cohort (≥ 65 yrs)."
 
         else:
+            ref_band = "Standard"
             severity = "Normal"
+            deviation = "Within"
             tag = "normal"
             badge_color = "#16A34A"
             desc = "Within expected parameters."
@@ -436,6 +475,8 @@ def classify_parameter_indicators(input_data: Dict[str, Any]) -> List[Dict[str, 
                 "label": label,
                 "value": val,
                 "unit": unit,
+                "ref_band": ref_band,
+                "deviation": deviation,
                 "severity": severity,
                 "tag": tag,
                 "badge_color": badge_color,

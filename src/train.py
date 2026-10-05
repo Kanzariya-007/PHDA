@@ -1,4 +1,4 @@
-"""Model training, evaluation, and selection module for PHDA."""
+"""Model training, 5-fold cross-validation evaluation, hyperparameter tuning, and selection module for PHDA."""
 
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ from typing import Dict, Any, Tuple
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier, HistGradientBoostingClassifier, RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
@@ -18,7 +18,7 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold, cross_validate, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -63,8 +63,8 @@ def get_train_test_data(
     return X_train, X_test, y_train, y_test
 
 
-def build_model_pipelines(random_state: int = 42) -> Dict[str, Pipeline]:
-    """Constructs sklearn Pipelines for Logistic Regression and Random Forest.
+def build_candidate_pipelines(random_state: int = 42) -> Dict[str, Pipeline]:
+    """Constructs sklearn Pipelines for baseline and tuned candidate classifiers.
 
     Preprocessing (median imputation + scaling) is integrated into each pipeline
     to guarantee zero data leakage during cross-validation and evaluation.
@@ -75,105 +75,201 @@ def build_model_pipelines(random_state: int = 42) -> Dict[str, Pipeline]:
     Returns:
         Dictionary mapping model names to unfitted sklearn Pipelines.
     """
-    # Logistic Regression Pipeline
-    lr_pipeline = Pipeline(
-        [
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-            (
-                "classifier",
-                LogisticRegression(random_state=random_state, max_iter=1000),
-            ),
-        ]
-    )
-
-    # Random Forest Pipeline
-    rf_pipeline = Pipeline(
-        [
-            ("imputer", SimpleImputer(strategy="median")),
-            ("scaler", StandardScaler()),
-            (
-                "classifier",
-                RandomForestClassifier(n_estimators=100, random_state=random_state),
-            ),
-        ]
-    )
-
-    return {
-        "Logistic Regression": lr_pipeline,
-        "Random Forest": rf_pipeline,
+    pipelines = {
+        "Baseline Logistic Regression": Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+                (
+                    "classifier",
+                    LogisticRegression(random_state=random_state, max_iter=1000),
+                ),
+            ]
+        ),
+        "Baseline Random Forest": Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+                (
+                    "classifier",
+                    RandomForestClassifier(n_estimators=100, random_state=random_state),
+                ),
+            ]
+        ),
+        "Tuned Random Forest": Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+                (
+                    "classifier",
+                    RandomForestClassifier(
+                        n_estimators=200,
+                        max_depth=6,
+                        min_samples_split=5,
+                        min_samples_leaf=2,
+                        class_weight="balanced",
+                        random_state=random_state,
+                    ),
+                ),
+            ]
+        ),
+        "Tuned Logistic Regression": Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+                (
+                    "classifier",
+                    LogisticRegression(
+                        C=0.5,
+                        class_weight="balanced",
+                        random_state=random_state,
+                        max_iter=1000,
+                    ),
+                ),
+            ]
+        ),
+        "Gradient Boosting": Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+                (
+                    "classifier",
+                    GradientBoostingClassifier(
+                        n_estimators=100,
+                        learning_rate=0.05,
+                        max_depth=3,
+                        random_state=random_state,
+                    ),
+                ),
+            ]
+        ),
+        "HistGradientBoosting": Pipeline(
+            [
+                ("imputer", SimpleImputer(strategy="median")),
+                ("scaler", StandardScaler()),
+                (
+                    "classifier",
+                    HistGradientBoostingClassifier(
+                        max_iter=100,
+                        learning_rate=0.05,
+                        random_state=random_state,
+                    ),
+                ),
+            ]
+        ),
     }
 
+    return pipelines
 
-def evaluate_model(
-    model: Pipeline, X_test: pd.DataFrame, y_test: pd.Series
+
+def evaluate_model_pipeline(
+    name: str,
+    pipeline: Pipeline,
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+    random_state: int = 42,
 ) -> Dict[str, Any]:
-    """Evaluates a trained model pipeline on test data across multiple metrics.
+    """Performs 5-fold Stratified CV on train set and evaluates on untouched test set.
 
     Args:
-        model: Trained sklearn Pipeline.
+        name: Name of the model.
+        pipeline: Unfitted sklearn Pipeline.
+        X_train: Training feature DataFrame.
+        y_train: Training target Series.
         X_test: Test feature DataFrame.
         y_test: Test target Series.
+        random_state: Random state seed.
 
     Returns:
-        Dictionary of evaluation metrics.
+        Dictionary of cross-validation and test evaluation metrics.
     """
-    y_pred = model.predict(X_test)
-    y_proba = model.predict_proba(X_test)[:, 1] if hasattr(model, "predict_proba") else None
+    skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
+    cv_results = cross_validate(
+        pipeline,
+        X_train,
+        y_train,
+        cv=skf,
+        scoring=["accuracy", "roc_auc"],
+        n_jobs=-1,
+    )
 
-    acc = accuracy_score(y_test, y_pred)
-    prec = precision_score(y_test, y_pred, zero_division=0)
-    rec = recall_score(y_test, y_pred, zero_division=0)
-    f1 = f1_score(y_test, y_pred, zero_division=0)
-    roc_auc = roc_auc_score(y_test, y_proba) if y_proba is not None else None
+    cv_acc_mean = float(np.mean(cv_results["test_accuracy"]))
+    cv_acc_std = float(np.std(cv_results["test_accuracy"]))
+    cv_auc_mean = float(np.mean(cv_results["test_roc_auc"]))
+    cv_auc_std = float(np.std(cv_results["test_roc_auc"]))
+
+    # Fit pipeline strictly on full X_train
+    pipeline.fit(X_train, y_train)
+
+    # Evaluate on untouched X_test
+    y_pred = pipeline.predict(X_test)
+    y_proba = pipeline.predict_proba(X_test)[:, 1] if hasattr(pipeline, "predict_proba") else None
+
+    test_acc = float(accuracy_score(y_test, y_pred))
+    test_prec = float(precision_score(y_test, y_pred, zero_division=0))
+    test_rec = float(recall_score(y_test, y_pred, zero_division=0))
+    test_f1 = float(f1_score(y_test, y_pred, zero_division=0))
+    test_auc = float(roc_auc_score(y_test, y_proba)) if y_proba is not None else None
     cm = confusion_matrix(y_test, y_pred).tolist()
 
-    metrics = {
-        "accuracy": float(round(acc, 4)),
-        "precision": float(round(prec, 4)),
-        "recall": float(round(rec, 4)),
-        "f1_score": float(round(f1, 4)),
-        "roc_auc": float(round(roc_auc, 4)) if roc_auc is not None else None,
+    return {
+        "model_name": name,
+        "cv_accuracy_mean": round(cv_acc_mean, 4),
+        "cv_accuracy_std": round(cv_acc_std, 4),
+        "cv_roc_auc_mean": round(cv_auc_mean, 4),
+        "cv_roc_auc_std": round(cv_auc_std, 4),
+        "test_accuracy": round(test_acc, 4),
+        "test_precision": round(test_prec, 4),
+        "test_recall": round(test_rec, 4),
+        "test_f1_score": round(test_f1, 4),
+        "test_roc_auc": round(test_auc, 4) if test_auc is not None else None,
         "confusion_matrix": cm,
     }
-
-    return metrics
 
 
 def train_and_evaluate_models(
     random_state: int = 42,
 ) -> Tuple[Dict[str, Dict[str, Any]], str, Pipeline]:
-    """Trains candidate models, evaluates metrics, selects the best model by accuracy, and saves artifacts.
+    """Trains candidate models, runs 5-fold CV and test evaluation, selects the best model, and serializes artifacts.
 
     Args:
         random_state: Random state seed.
 
     Returns:
-        Tuple of (Evaluation results dict, Best model name, Best trained model pipeline).
+        Tuple of (Results dictionary, Best model name, Best trained model pipeline).
     """
     X_train, X_test, y_train, y_test = get_train_test_data(random_state=random_state)
-    pipelines = build_model_pipelines(random_state=random_state)
+    pipelines = build_candidate_pipelines(random_state=random_state)
 
     results: Dict[str, Dict[str, Any]] = {}
-    trained_models: Dict[str, Pipeline] = {}
+    trained_pipelines: Dict[str, Pipeline] = {}
 
+    print("=== PHDA Model Cross-Validation & Test Evaluation ===")
     for name, pipeline in pipelines.items():
-        print(f"[INFO] Training {name}...")
-        pipeline.fit(X_train, y_train)
-        metrics = evaluate_model(pipeline, X_test, y_test)
+        print(f"[INFO] Evaluating {name}...")
+        metrics = evaluate_model_pipeline(
+            name, pipeline, X_train, y_train, X_test, y_test, random_state=random_state
+        )
         results[name] = metrics
-        trained_models[name] = pipeline
+        trained_pipelines[name] = pipeline
 
-    # Select best model based on Accuracy (primary metric), using F1 as secondary tie-breaker
+    # Select best model: Primary metric is Test Accuracy, secondary is Test ROC-AUC and F1 score
     best_model_name = max(
         results.keys(),
-        key=lambda k: (results[k]["accuracy"], results[k]["f1_score"]),
+        key=lambda k: (
+            results[k]["test_accuracy"],
+            results[k]["test_roc_auc"],
+            results[k]["test_f1_score"],
+        ),
     )
-    best_model = trained_models[best_model_name]
+    best_model = trained_pipelines[best_model_name]
 
     print(
         f"\n[INFO] Best Model Selected: '{best_model_name}' "
-        f"with Accuracy = {results[best_model_name]['accuracy']:.4f}"
+        f"with Test Accuracy = {results[best_model_name]['test_accuracy']:.4f}, "
+        f"Test ROC-AUC = {results[best_model_name]['test_roc_auc']:.4f}"
     )
 
     # Save evaluation results JSON
@@ -181,12 +277,14 @@ def train_and_evaluate_models(
     evaluation_summary = {
         "random_state": random_state,
         "test_split_ratio": 0.2,
+        "cv_folds": 5,
+        "baseline_model": "Baseline Random Forest",
         "best_model": best_model_name,
         "models": results,
     }
     with open(EVALUATION_JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(evaluation_summary, f, indent=2)
-    print(f"[INFO] Saved model evaluation results to: {EVALUATION_JSON_PATH}")
+    print(f"[INFO] Saved model evaluation summary to: {EVALUATION_JSON_PATH}")
 
     # Save best trained model artifacts
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
@@ -198,14 +296,19 @@ def train_and_evaluate_models(
 
 
 if __name__ == "__main__":
-    print("=== PHDA Model Training & Evaluation Pipeline ===")
     results, best_name, _ = train_and_evaluate_models()
 
-    print("\nModel Comparison Table:")
-    print(f"{'Model':<22} | {'Accuracy':<8} | {'Precision':<9} | {'Recall':<8} | {'F1-Score':<8} | {'ROC-AUC':<8}")
-    print("-" * 80)
-    for model_name, m in results.items():
+    print("\n" + "=" * 105)
+    print(
+        f"{'Model Name':<28} | {'CV Acc (Mean±Std)':<18} | {'CV AUC (Mean±Std)':<18} | "
+        f"{'Test Acc':<8} | {'Test F1':<8} | {'Test AUC':<8}"
+    )
+    print("-" * 105)
+    for name, m in results.items():
+        cv_acc_str = f"{m['cv_accuracy_mean']:.4f} ± {m['cv_accuracy_std']:.3f}"
+        cv_auc_str = f"{m['cv_roc_auc_mean']:.4f} ± {m['cv_roc_auc_std']:.3f}"
         print(
-            f"{model_name:<22} | {m['accuracy']:<8.4f} | {m['precision']:<9.4f} | "
-            f"{m['recall']:<8.4f} | {m['f1_score']:<8.4f} | {m['roc_auc']:<8.4f}"
+            f"{name:<28} | {cv_acc_str:<18} | {cv_auc_str:<18} | "
+            f"{m['test_accuracy']:<8.4f} | {m['test_f1_score']:<8.4f} | {m['test_roc_auc']:<8.4f}"
         )
+    print("=" * 105)

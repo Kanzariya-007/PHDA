@@ -404,10 +404,13 @@ def main():
                             <div class="metric-card">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <strong>{ind['label']}</strong>
-                                    <span class="{badge_class}">{ind['severity']}</span>
+                                    <span class="{badge_class}">{ind['severity']} ({ind['deviation']} Reference)</span>
                                 </div>
                                 <div style="font-size:1.1rem; font-weight:600; margin:4px 0;">{ind['value']} {ind['unit']}</div>
-                                <div style="font-size:0.82rem; color:#64748B;">{ind['description']}</div>
+                                <div style="font-size:0.8rem; color:#475569; margin-bottom:4px;">
+                                    <strong>Reference Band:</strong> {ind['ref_band']} | <strong>Status:</strong> {ind['deviation']} Reference Band
+                                </div>
+                                <div style="font-size:0.82rem; color:#64748B;"><em>Interpretation:</em> {ind['description']}</div>
                             </div>
                             """,
                             unsafe_allow_html=True,
@@ -424,10 +427,13 @@ def main():
                             <div class="metric-card">
                                 <div style="display:flex; justify-content:space-between; align-items:center;">
                                     <strong>{ind['label']}</strong>
-                                    <span class="badge-normal">Normal</span>
+                                    <span class="badge-normal">Normal (Within Reference)</span>
                                 </div>
                                 <div style="font-size:1.1rem; font-weight:600; margin:4px 0;">{ind['value']} {ind['unit']}</div>
-                                <div style="font-size:0.82rem; color:#64748B;">{ind['description']}</div>
+                                <div style="font-size:0.8rem; color:#475569; margin-bottom:4px;">
+                                    <strong>Reference Band:</strong> {ind['ref_band']} | <strong>Status:</strong> Within Reference Band
+                                </div>
+                                <div style="font-size:0.82rem; color:#64748B;"><em>Interpretation:</em> {ind['description']}</div>
                             </div>
                             """,
                             unsafe_allow_html=True,

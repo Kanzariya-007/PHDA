@@ -28,6 +28,82 @@ FEATURE_CONTRACT: List[str] = [
     "Age",
 ]
 
+# Sensible ranges, defaults, units, and help texts for UI controls based on PIMA dataset & clinical defaults
+FEATURE_CONFIG: Dict[str, Dict[str, Any]] = {
+    "Pregnancies": {
+        "min": 0,
+        "max": 17,
+        "default": 1,
+        "step": 1,
+        "unit": "count",
+        "label": "Pregnancies",
+        "help": "Number of times pregnant.",
+    },
+    "Glucose": {
+        "min": 0.0,
+        "max": 200.0,
+        "default": 120.0,
+        "step": 1.0,
+        "unit": "mg/dL",
+        "label": "Glucose Level",
+        "help": "Plasma glucose concentration at 2 hours in an oral glucose tolerance test. (0 represents unknown/unrecorded).",
+    },
+    "BloodPressure": {
+        "min": 0.0,
+        "max": 122.0,
+        "default": 70.0,
+        "step": 1.0,
+        "unit": "mm Hg",
+        "label": "Diastolic Blood Pressure",
+        "help": "Diastolic blood pressure in mm Hg. (0 represents unknown/unrecorded).",
+    },
+    "SkinThickness": {
+        "min": 0.0,
+        "max": 99.0,
+        "default": 20.0,
+        "step": 1.0,
+        "unit": "mm",
+        "label": "Triceps Skinfold Thickness",
+        "help": "Triceps skin fold thickness in mm. (0 represents unknown/unrecorded).",
+    },
+    "Insulin": {
+        "min": 0.0,
+        "max": 846.0,
+        "default": 80.0,
+        "step": 1.0,
+        "unit": "μU/ml",
+        "label": "2-Hour Serum Insulin",
+        "help": "2-Hour serum insulin in μU/ml. (0 represents unknown/unrecorded).",
+    },
+    "BMI": {
+        "min": 0.0,
+        "max": 67.1,
+        "default": 28.5,
+        "step": 0.1,
+        "unit": "kg/m²",
+        "label": "Body Mass Index (BMI)",
+        "help": "Body Mass Index (weight in kg / (height in m)²). (0 represents unknown/unrecorded).",
+    },
+    "DiabetesPedigreeFunction": {
+        "min": 0.078,
+        "max": 2.420,
+        "default": 0.470,
+        "step": 0.001,
+        "unit": "score",
+        "label": "Diabetes Pedigree Function",
+        "help": "Genetic risk score calculated from family history of diabetes.",
+    },
+    "Age": {
+        "min": 21,
+        "max": 81,
+        "default": 33,
+        "step": 1,
+        "unit": "years",
+        "label": "Age",
+        "help": "Age of the patient in years.",
+    },
+}
+
 _CACHED_MODEL: Union[Pipeline, None] = None
 
 

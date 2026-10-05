@@ -11,8 +11,10 @@ def test_feature_config_completeness():
     assert set(FEATURE_CONFIG.keys()) == set(FEATURE_CONTRACT)
 
     for feature_name, cfg in FEATURE_CONFIG.items():
-        assert "min" in cfg
-        assert "max" in cfg
+        assert "dataset_min" in cfg
+        assert "dataset_max" in cfg
+        assert "val_min" in cfg
+        assert "val_max" in cfg
         assert "default" in cfg
         assert "step" in cfg
         assert "unit" in cfg
@@ -20,7 +22,8 @@ def test_feature_config_completeness():
         assert "help" in cfg
 
         # Range and default sanity check
-        assert cfg["min"] <= cfg["default"] <= cfg["max"]
+        assert cfg["val_min"] <= cfg["default"] <= cfg["val_max"]
+        assert cfg["dataset_min"] <= cfg["dataset_max"]
         assert cfg["step"] > 0
 
 

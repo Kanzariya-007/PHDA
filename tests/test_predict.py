@@ -1,4 +1,4 @@
-"""Unit and integration tests for model inference and serialization."""
+"""Unit and integration tests for model inference, validation, and parameter indicators."""
 
 from pathlib import Path
 import joblib
@@ -10,6 +10,7 @@ from sklearn.pipeline import Pipeline
 from src.predict import (
     DEFAULT_MODEL_PKL_PATH,
     FEATURE_CONTRACT,
+    classify_parameter_indicators,
     format_and_validate_input,
     load_model,
     make_prediction,
@@ -40,12 +41,27 @@ def sample_patient_dict() -> dict:
     }
 
 
-def test_load_model(ensure_model_pkl):
+def test_load_model_success(ensure_model_pkl):
     """Test that load_model successfully loads sklearn Pipeline from .pkl artifact."""
     model = load_model(DEFAULT_MODEL_PKL_PATH, use_cache=False)
     assert isinstance(model, Pipeline)
     assert hasattr(model, "predict")
     assert hasattr(model, "predict_proba")
+
+
+def test_load_model_missing_file_raises_error(tmp_path):
+    """Test load_model with auto_train_if_missing=False raises FileNotFoundError when file is missing."""
+    missing_path = tmp_path / "non_existent_model.pkl"
+    with pytest.raises(FileNotFoundError, match="Model file not found"):
+        load_model(missing_path, use_cache=False, auto_train_if_missing=False)
+
+
+def test_load_model_corrupt_file_raises_error(tmp_path):
+    """Test load_model raises RuntimeError when loading a corrupted file."""
+    corrupt_path = tmp_path / "corrupt_model.pkl"
+    corrupt_path.write_text("invalid binary garbage content")
+    with pytest.raises(RuntimeError, match="Failed to load model artifact"):
+        load_model(corrupt_path, use_cache=False, auto_train_if_missing=False)
 
 
 def test_format_and_validate_input_valid(sample_patient_dict):
@@ -58,18 +74,45 @@ def test_format_and_validate_input_valid(sample_patient_dict):
 
 def test_format_and_validate_input_shuffled_keys(sample_patient_dict):
     """Test that input feature columns are strictly ordered according to FEATURE_CONTRACT."""
-    # Reverse dictionary order
     shuffled_dict = {k: sample_patient_dict[k] for k in reversed(list(sample_patient_dict.keys()))}
     df_val = format_and_validate_input(shuffled_dict)
     assert list(df_val.columns) == FEATURE_CONTRACT
 
 
-def test_format_and_validate_input_missing_feature(sample_patient_dict):
-    """Test that missing required features raise ValueError."""
-    incomplete_dict = sample_patient_dict.copy()
-    del incomplete_dict["Glucose"]
-    with pytest.raises(ValueError, match="Missing required feature"):
-        format_and_validate_input(incomplete_dict)
+def test_format_and_validate_input_negative_values(sample_patient_dict):
+    """Test that negative input values raise ValueError."""
+    # Negative BMI
+    invalid_bmi = sample_patient_dict.copy()
+    invalid_bmi["BMI"] = -5.0
+    with pytest.raises(ValueError, match="cannot be negative"):
+        format_and_validate_input(invalid_bmi)
+
+    # Negative Age
+    invalid_age = sample_patient_dict.copy()
+    invalid_age["Age"] = -10
+    with pytest.raises(ValueError, match="cannot be negative"):
+        format_and_validate_input(invalid_age)
+
+    # Negative Pregnancies
+    invalid_preg = sample_patient_dict.copy()
+    invalid_preg["Pregnancies"] = -1
+    with pytest.raises(ValueError, match="cannot be negative"):
+        format_and_validate_input(invalid_preg)
+
+
+def test_format_and_validate_input_out_of_bounds(sample_patient_dict):
+    """Test that out-of-bounds input values raise ValueError."""
+    # Glucose above validation limit
+    invalid_glucose = sample_patient_dict.copy()
+    invalid_glucose["Glucose"] = 500.0
+    with pytest.raises(ValueError, match="outside the application validation range"):
+        format_and_validate_input(invalid_glucose)
+
+    # Age above validation limit
+    invalid_age = sample_patient_dict.copy()
+    invalid_age["Age"] = 150
+    with pytest.raises(ValueError, match="outside the application validation range"):
+        format_and_validate_input(invalid_age)
 
 
 def test_format_and_validate_input_invalid_zeros(sample_patient_dict):
@@ -89,6 +132,30 @@ def test_format_and_validate_input_invalid_zeros(sample_patient_dict):
     assert pd.isna(df_val.loc[0, "Insulin"])
 
 
+def test_classify_parameter_indicators(sample_patient_dict):
+    """Test parameter reference band indicator engine."""
+    indicators = classify_parameter_indicators(sample_patient_dict)
+    assert len(indicators) == 8
+
+    # Verify keys present in indicator dictionaries
+    for ind in indicators:
+        assert "feature" in ind
+        assert "severity" in ind
+        assert ind["severity"] in ["Very High", "High", "Normal", "Low", "Very Low"]
+        assert "tag" in ind
+        assert ind["tag"] in ["normal", "warning", "danger"]
+        assert "badge_color" in ind
+        assert "description" in ind
+
+    # High Glucose case (Glucose = 150 -> Very High)
+    high_patient = sample_patient_dict.copy()
+    high_patient["Glucose"] = 150.0
+    high_inds = classify_parameter_indicators(high_patient)
+    glucose_ind = next(i for i in high_inds if i["feature"] == "Glucose")
+    assert glucose_ind["severity"] == "Very High"
+    assert glucose_ind["tag"] == "danger"
+
+
 def test_make_prediction_structure(ensure_model_pkl, sample_patient_dict):
     """Test prediction execution and output schema."""
     res = make_prediction(sample_patient_dict, model_path=DEFAULT_MODEL_PKL_PATH)
@@ -101,7 +168,6 @@ def test_make_prediction_structure(ensure_model_pkl, sample_patient_dict):
     assert "probability_diabetic" in res
     assert "confidence" in res
 
-    # Probabilities sum to 1.0
     total_prob = res["probability_non_diabetic"] + res["probability_diabetic"]
     assert pytest.approx(total_prob, abs=1e-3) == 1.0
 
@@ -114,7 +180,6 @@ def test_model_round_trip_serialization(sample_patient_dict, tmp_path):
     joblib.dump(model, tmp_pkl_path)
     assert tmp_pkl_path.exists()
 
-    # Make prediction using temporary artifact
     res_orig = make_prediction(sample_patient_dict, model=model)
     res_loaded = make_prediction(sample_patient_dict, model_path=tmp_pkl_path)
 
